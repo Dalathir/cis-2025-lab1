@@ -16,15 +16,15 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-      # Step 1: Checkout code
+
       - name: Checkout repository
         uses: actions/checkout@v4
         
-      # Step 2: Setup .NET
+
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         
-      # Step 3: Setup Node.js with caching
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -32,13 +32,13 @@ jobs:
           cache: 'npm'
           cache-dependency-path: frontend/package-lock.json
           
-      # Step 4: Restore frontend dependencies
+
       - name: Restore frontend dependencies
         working-directory: ./frontend
         run: npm ci
         continue-on-error: true
         
-      # Step 5: Run frontend tests
+
       - name: Run frontend tests
         working-directory: ./frontend
         run: npm run test:allure -- --run
@@ -46,12 +46,12 @@ jobs:
         env:
           ALLURE_RESULTS_DIR: allure-results
           
-      # Step 6: Restore .NET dependencies
+
       - name: Restore .NET dependencies
         working-directory: ./backend
         run: dotnet restore
         
-      # Step 7: Run backend tests with Allure
+
       - name: Run backend tests with Allure
         working-directory: ./backend
         run: |
@@ -60,7 +60,7 @@ jobs:
           dotnet test Tests/Tests.csproj
         continue-on-error: true
         
-      # Step 8: Download Allure CLI
+
       - name: Download Allure CLI
         run: |
           wget -q https://github.com/allure-framework/allure2/releases/download/2.24.1/allure-2.24.1.tgz
@@ -68,7 +68,7 @@ jobs:
           sudo mv allure-2.24.1 /opt/allure
           sudo ln -sf /opt/allure/bin/allure /usr/local/bin/allure
           
-      # Step 9: Collect all Allure results
+
       - name: Collect all Allure results
         run: |
           mkdir -p allure-results
@@ -81,13 +81,13 @@ jobs:
             fi
           done
           
-      # Step 10: Generate Allure report
+
       - name: Generate Allure report
         if: always()
         run: |
           allure generate allure-results -o allure-report --clean
           
-      # Step 11: Get Allure history from gh-pages
+
       - name: Get Allure history from gh-pages
         if: always()
         continue-on-error: true
@@ -96,7 +96,7 @@ jobs:
           ref: gh-pages
           path: gh-pages
           
-      # Step 12: Prepare Allure history
+
       - name: Prepare Allure history
         if: always()
         run: |
@@ -106,7 +106,7 @@ jobs:
           fi
           cp -r allure-report allure-history/ || true
           
-      # Step 13: Upload Allure Report
+
       - name: Upload Allure Report
         if: always()
         uses: actions/upload-artifact@v4
@@ -115,7 +115,7 @@ jobs:
           path: allure-report
           retention-days: 30
           
-      # Step 14: Deploy Allure Report to GitHub Pages
+
       - name: Deploy Allure Report to GitHub Pages
         if: always() && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
         uses: peaceiris/actions-gh-pages@v3
