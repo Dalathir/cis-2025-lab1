@@ -81,7 +81,7 @@ pipeline {
                 }
             }
             steps {
-                dir('backend') {
+                dir('backend/Tests') {
                     script {
                         try {
                             // Запуск тестов с генерацией Allure отчетов
@@ -95,7 +95,7 @@ pipeline {
             }
             post {
                 always {
-                    dir('backend') {
+                    dir('backend/Tests') {
                         script {
                             def hasAllureResults = sh(
                                 script: 'test -d allure-results && [ "$(find allure-results -type f 2>/dev/null | wc -l)" -gt 0 ]',
