@@ -74,11 +74,50 @@ pipeline {
                 }
             }
         }
+        stage('Test Backend') {
+            agent {
+                docker {
+                    image "registry.access.redhat.com/ubi8/dotnet-80:8.0"
+                }
+            }
+            steps {
+                dir('backend') {
+                    script {
+                        try {
+                            // Запуск тестов с генерацией Allure отчетов
+                            sh 'dotnet test --verbosity normal --logger "trx;LogFileName=test-results.trx" --logger "allure" --results-directory allure-results'
+                        } catch (Exception e) {
+                            echo "Backend tests failed: ${e.getMessage()}"
+                            currentBuild.result = 'UNSTABLE'
+                        }
+                    }
+                }
+            }
+            post {
+                always {
+                    dir('backend') {
+                        script {
+                            def hasAllureResults = sh(
+                                script: 'test -d allure-results && [ "$(find allure-results -type f 2>/dev/null | wc -l)" -gt 0 ]',
+                                returnStatus: true
+                            ) == 0
+                            if (hasAllureResults) {
+                                echo "Stashing backend/allure-results"
+                                stash name: 'backend-allure-results', includes: 'allure-results/**', allowEmpty: false
+                            } else {
+                                echo "No files in backend/allure-results, skipping stash"
+                            }
+                        }
+                    }
+                }
+            }
+        }
         stage('Prepare Allure Results') {
             steps {
                 script {
                     sh 'mkdir -p allure-results'
                     echo "=== Restoring Allure results from previous stages ==="
+                    
                     // Восстанавливаем результаты frontend тестов
                     try {
                         unstash 'frontend-allure-results'
@@ -91,6 +130,20 @@ pipeline {
                         '''
                     } catch (Exception e) {
                         echo "No frontend allure results to restore: ${e.getMessage()}"
+                    }
+                    
+                    // Восстанавливаем результаты backend тестов
+                    try {
+                        unstash 'backend-allure-results'
+                        sh '''
+                            if [ -d "backend/allure-results" ]; then
+                                echo "Restored backend/allure-results, copying..."
+                                cp -v backend/allure-results/*.json allure-results/ 2>&1 | head -20 || true
+                                echo "Backend results copied"
+                            fi
+                        '''
+                    } catch (Exception e) {
+                        echo "No backend allure results to restore: ${e.getMessage()}"
                     }
                     
                     // Создаем environment.properties для Allure (в конце, чтобы не перезаписать результаты)
@@ -134,7 +187,6 @@ EOF
         always {
             archiveArtifacts artifacts: 'allure-results/**', fingerprint: true, allowEmptyArchive: true
         }
-        
         failure {
             echo 'Pipeline failed. Check the test results in Allure Report.'
         }
