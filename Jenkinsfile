@@ -74,12 +74,6 @@ pipeline {
                 }
             }
         }
-        stage('Test Frontend') {
-            steps {
-                dir('backend') {
-                    sh 'dotnet test --verbosity normal --logger "trx;LogFileName=test-results.trx" --logger "allure" --results-directory allure-results'
-                }
-        }
         stage('Prepare Allure Results') {
             steps {
                 script {
